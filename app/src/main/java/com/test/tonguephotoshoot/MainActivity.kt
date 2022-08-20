@@ -81,9 +81,11 @@ class MainActivity : AppCompatActivity() {
 
             main_img_photo.setImageBitmap(imageBitmap)
 
+            val url = edit_url_string.text.toString() // editText에서 받아온 url
+
             // 서버로 이미지 데이터 보내기
             val retrofit = Retrofit.Builder()
-                .baseUrl(LOCAL_URL)
+                .baseUrl(url)
                 .addConverterFactory(GsonConverterFactory.create())
                 .build()
             val server = retrofit.create(RetrofitAPI::class.java)
