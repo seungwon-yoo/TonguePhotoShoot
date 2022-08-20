@@ -27,6 +27,8 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.io.OutputStream
 
+const val LOCAL_URL = "http://localhost:80"
+
 class MainActivity : AppCompatActivity() {
     val REQUEST_IMAGE_CAPTURE = 1
 
@@ -80,9 +82,8 @@ class MainActivity : AppCompatActivity() {
             main_img_photo.setImageBitmap(imageBitmap)
 
             // 서버로 이미지 데이터 보내기
-            val url = "http://192.168.0.10:80"
             val retrofit = Retrofit.Builder()
-                .baseUrl(url)
+                .baseUrl(LOCAL_URL)
                 .addConverterFactory(GsonConverterFactory.create())
                 .build()
             val server = retrofit.create(RetrofitAPI::class.java)
