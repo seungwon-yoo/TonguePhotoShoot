@@ -175,7 +175,7 @@ public class CameraActivity extends AppCompatActivity{
         mHandler = new Handler(handlerThread.getLooper());
         Handler mainHandler = new Handler(getMainLooper());
         try {
-            String mCameraId = "" + CameraCharacteristics.LENS_FACING_BACK; // 후면 카메라 사용
+            String mCameraId = "" + CameraCharacteristics.LENS_FACING_FRONT; // 전면 카메라 사용
 
             CameraManager mCameraManager = (CameraManager) this.getSystemService(Context.CAMERA_SERVICE);
             CameraCharacteristics characteristics = mCameraManager.getCameraCharacteristics(mCameraId);
@@ -184,11 +184,9 @@ public class CameraActivity extends AppCompatActivity{
             Size largestPreviewSize = map.getOutputSizes(ImageFormat.JPEG)[0];
             Log.i("LargestSize", largestPreviewSize.getWidth() + " " + largestPreviewSize.getHeight());
 
-            // setAspectRatioTextureView(largestPreviewSize.getHeight(),largestPreviewSize.getWidth());
-            setAspectRatioTextureView(largestPreviewSize.getWidth(),largestPreviewSize.getWidth());
+            setAspectRatioTextureView(largestPreviewSize.getHeight(),largestPreviewSize.getWidth());
 
-            mImageReader = ImageReader.newInstance(largestPreviewSize.getWidth(), largestPreviewSize.getWidth(), ImageFormat.JPEG,/*maxImages*/7);
-            // mImageReader = ImageReader.newInstance(largestPreviewSize.getWidth(), largestPreviewSize.getHeight(), ImageFormat.JPEG,/*maxImages*/7);
+            mImageReader = ImageReader.newInstance(largestPreviewSize.getWidth(), largestPreviewSize.getHeight(), ImageFormat.JPEG,/*maxImages*/7);
             mImageReader.setOnImageAvailableListener(mOnImageAvailableListener, mainHandler);
             if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                 return;
