@@ -1,14 +1,22 @@
 package com.test.tonguephotoshoot
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.Camera
+import android.hardware.camera2.CameraAccessException
+import android.hardware.camera2.CameraManager
+import android.media.Image
+import android.media.ImageReader
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.provider.MediaStore
 import android.util.Log
+import android.util.Size
+import android.view.Surface
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import kotlinx.android.synthetic.main.activity_main.*
@@ -38,12 +46,16 @@ class MainActivity : AppCompatActivity() {
         checkPermission()
 
         main_btn_camera_open.setOnClickListener {
-            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-                Intent(MediaStore.ACTION_IMAGE_CAPTURE).also { takePictureIntent ->
+            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                // 일반적인 카메라
+                /*Intent(MediaStore.ACTION_IMAGE_CAPTURE).also { takePictureIntent ->
                     takePictureIntent.resolveActivity(packageManager)?.also {
                         startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE)
                     }
-                }
+                }*/
+                val cameraIntent = Intent(this, CameraActivity::class.java)
+                startActivity(cameraIntent)
+            }
         }
     }
 
