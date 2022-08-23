@@ -4,12 +4,14 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.drawable.BitmapDrawable
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import kotlinx.android.synthetic.main.activity_main.*
 import okhttp3.MediaType
@@ -40,10 +42,20 @@ class MainActivity : AppCompatActivity() {
         main_btn_camera_open.setOnClickListener {
             if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
                 Intent(MediaStore.ACTION_IMAGE_CAPTURE).also { takePictureIntent ->
+                    // 전면 카메라 실행
+                    if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
+                        takePictureIntent.putExtra("android.intent.extras.LENS_FACING_FRONT", 1)
+                    } else {
+                        takePictureIntent.putExtra("android.intent.extras.CAMERA_FACING", 1)
+                    }
                     takePictureIntent.resolveActivity(packageManager)?.also {
                         startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE)
                     }
                 }
+        }
+
+        test_button.setOnClickListener{
+            startTest()
         }
     }
 
@@ -55,6 +67,16 @@ class MainActivity : AppCompatActivity() {
 
         if(denied > 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             requestPermissions(permission.values.toTypedArray(), REQUEST_IMAGE_CAPTURE)
+        }
+
+        val MY_PERMISSION_ACCESS_ALL = 100
+        if(ActivityCompat.checkSelfPermission(this, android.Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
+            || ActivityCompat.checkSelfPermission(this, android.Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED){
+            var permissions = arrayOf(
+                android.Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                android.Manifest.permission.READ_EXTERNAL_STORAGE
+            )
+            ActivityCompat.requestPermissions(this, permissions, MY_PERMISSION_ACCESS_ALL)
         }
     }
 
@@ -90,24 +112,63 @@ class MainActivity : AppCompatActivity() {
                 .build()
             val server = retrofit.create(RetrofitAPI::class.java)
 
-            // 해당 파일을 휴대폰에 저장
             val id = edit_text_number.text.toString().toInt()
 
+            // 해당 파일을 휴대폰에 저장
             val file = convertBitmapToFile(imageBitmap, "/storage/emulated/0/Download/$id")
             val requestFile = file.asRequestBody("multipart/form-data".toMediaTypeOrNull())
             val body: MultipartBody.Part = MultipartBody.Part.createFormData("image", file.name, requestFile)
 
             server.uploadImage(id, body).enqueue((object: Callback<ResponseDC> {
                 override fun onFailure(call: Call<ResponseDC>, t: Throwable) {
-
+                    val msg = "업로드 실패"
+                    Toast.makeText(applicationContext, msg, Toast.LENGTH_LONG).show()
                 }
 
                 override fun onResponse(call: Call<ResponseDC>, response: Response<ResponseDC>) {
-                    Log.d("response : ", response?.body().toString())
+                    val msg = response?.body().toString()
+                    Toast.makeText(applicationContext, msg,
+                        Toast.LENGTH_LONG).show()
                 }
             }))
         }
    }
+
+    private fun startTest() {
+        val url = edit_url_string.text.toString() // editText에서 받아온 url
+
+        // 서버로 이미지 데이터 보내기
+        val retrofit = Retrofit.Builder()
+            .baseUrl(url)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+        val server = retrofit.create(RetrofitAPI::class.java)
+
+        val id = edit_text_number.text.toString().toInt()
+
+        val drawable = getDrawable(R.drawable.tongue)
+        val bitmap = (drawable as BitmapDrawable).bitmap
+
+        val directory = File("/storage/emulated/0/Download/")
+        if(!directory.exists())
+            directory.mkdirs()
+
+        val file = convertBitmapToFile(bitmap, "/storage/emulated/0/Download/$id")
+        val requestFile = file.asRequestBody("multipart/form-data".toMediaTypeOrNull())
+        val body: MultipartBody.Part = MultipartBody.Part.createFormData("image", file.name, requestFile)
+
+        server.uploadImage(id, body).enqueue((object: Callback<ResponseDC> {
+            override fun onFailure(call: Call<ResponseDC>, t: Throwable) {
+                val msg = t.localizedMessage
+                Toast.makeText(applicationContext, msg, Toast.LENGTH_LONG).show()
+            }
+
+            override fun onResponse(call: Call<ResponseDC>, response: Response<ResponseDC>) {
+                val msg = response?.body().toString()
+                Toast.makeText(applicationContext, msg, Toast.LENGTH_LONG).show()
+            }
+        }))
+    }
 
     private fun convertBitmapToFile(bitmap: Bitmap, filePath: String): File {
         val file = File(filePath)

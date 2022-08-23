@@ -30,7 +30,7 @@
         android:inputType="none"
 
         android:minHeight="48dp"
-        android:text="http://localhost:80"
+        android:text="http://125.6.38.24:8010"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -45,6 +45,16 @@
         app:layout_constraintTop_toBottomOf="@+id/edit_text_number" />
 
     <Button
+        android:id="@+id/test_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Test Start"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/main_btn_camera_open" />
+
+    <Button
         android:id="@+id/main_btn_camera_open"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -55,4 +65,5 @@
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0.903" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>
