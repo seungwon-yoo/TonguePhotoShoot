@@ -1,18 +1,24 @@
 package com.test.tonguephotoshoot
 
 import android.Manifest
+import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.ImageDecoder
 import android.graphics.drawable.BitmapDrawable
+import android.net.Uri
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import kotlinx.android.synthetic.main.activity_main.*
 import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -28,10 +34,13 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.io.OutputStream
+import java.text.SimpleDateFormat
+import java.util.*
 
 const val LOCAL_URL = "http://localhost:80"
 
 class MainActivity : AppCompatActivity() {
+    lateinit var currentPhotoPath : String
     val REQUEST_IMAGE_CAPTURE = 1
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -40,18 +49,7 @@ class MainActivity : AppCompatActivity() {
         checkPermission()
 
         main_btn_camera_open.setOnClickListener {
-            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-                Intent(MediaStore.ACTION_IMAGE_CAPTURE).also { takePictureIntent ->
-                    // 전면 카메라 실행
-                    if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
-                        takePictureIntent.putExtra("android.intent.extras.LENS_FACING_FRONT", 1)
-                    } else {
-                        takePictureIntent.putExtra("android.intent.extras.CAMERA_FACING", 1)
-                    }
-                    takePictureIntent.resolveActivity(packageManager)?.also {
-                        startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE)
-                    }
-                }
+            startCapture()
         }
 
         test_button.setOnClickListener{
@@ -96,8 +94,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+    /*override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+
         if(requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
             val imageBitmap = data?.extras?.get("data") as Bitmap
 
@@ -121,7 +120,7 @@ class MainActivity : AppCompatActivity() {
 
             server.uploadImage(id, body).enqueue((object: Callback<ResponseDC> {
                 override fun onFailure(call: Call<ResponseDC>, t: Throwable) {
-                    val msg = "업로드 실패"
+                    val msg = t.localizedMessage
                     Toast.makeText(applicationContext, msg, Toast.LENGTH_LONG).show()
                 }
 
@@ -132,7 +131,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }))
         }
-   }
+   }*/
 
     private fun startTest() {
         val url = edit_url_string.text.toString() // editText에서 받아온 url
@@ -194,5 +193,95 @@ class MainActivity : AppCompatActivity() {
         }
 
         return file
+    }
+
+    @Throws(IOException::class)
+    private fun createImageFile() : File {
+        val timeStamp : String = SimpleDateFormat("yyyyMMdd_HHmmss").format(Date())
+        val storageDir : File? = getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+        return File.createTempFile(
+            "JPEG_${timeStamp}_",
+            ".jpg",
+            storageDir
+        ).apply{
+            currentPhotoPath = absolutePath
+        }
+    }
+
+    fun startCapture(){
+        Intent(MediaStore.ACTION_IMAGE_CAPTURE).also { takePictureIntent ->
+            takePictureIntent.resolveActivity(packageManager)?.also {
+                val photoFile: File? = try{
+                    createImageFile()
+                }catch(ex:IOException){
+                    null
+                }
+                photoFile?.also {
+                    val photoURI : Uri = FileProvider.getUriForFile(
+                        this,
+                        "com.test.tonguephotoshoot.fileprovider",
+                        it
+                    )
+
+                    if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
+                        takePictureIntent.putExtra("android.intent.extras.LENS_FACING_FRONT", 1)
+                    } else {
+                        takePictureIntent.putExtra("android.intent.extras.CAMERA_FACING", 1)
+                    }
+
+                    takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI)
+                    startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE)
+                }
+            }
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        if(requestCode == REQUEST_IMAGE_CAPTURE && resultCode == Activity.RESULT_OK){
+            val file = File(currentPhotoPath)
+            if (Build.VERSION.SDK_INT < 28) {
+                val bitmap = MediaStore.Images.Media
+                    .getBitmap(contentResolver, Uri.fromFile(file))
+                main_img_photo.setImageBitmap(bitmap)
+            }
+            else{
+                val decode = ImageDecoder.createSource(this.contentResolver,
+                    Uri.fromFile(file))
+                val bitmap = ImageDecoder.decodeBitmap(decode)
+                main_img_photo.setImageBitmap(bitmap)
+            }
+
+            val url = edit_url_string.text.toString() // editText에서 받아온 url
+            val retrofit = Retrofit.Builder()
+                .baseUrl(url)
+                .addConverterFactory(GsonConverterFactory.create())
+                .build()
+            val server = retrofit.create(RetrofitAPI::class.java)
+
+            var id: Int?
+            if (edit_text_number.text.toString().isEmpty()) {
+                id = 1
+            } else {
+                id = edit_text_number.text.toString().toInt()
+            }
+
+            val requestFile = file.asRequestBody("multipart/form-data".toMediaTypeOrNull())
+            val body: MultipartBody.Part = MultipartBody.Part.createFormData("image", file.name, requestFile)
+
+            server.uploadImage(id, body).enqueue((object: Callback<ResponseDC> {
+                override fun onFailure(call: Call<ResponseDC>, t: Throwable) {
+                    val msg = t.localizedMessage
+                    Toast.makeText(applicationContext, msg, Toast.LENGTH_LONG).show()
+                }
+
+                override fun onResponse(call: Call<ResponseDC>, response: Response<ResponseDC>) {
+                    val msg = response?.body().toString()
+                    Toast.makeText(applicationContext, msg,
+                        Toast.LENGTH_LONG).show()
+                }
+            }))
+        }
     }
 }
