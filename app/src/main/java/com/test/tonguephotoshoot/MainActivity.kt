@@ -37,8 +37,6 @@ import java.io.OutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 
-const val LOCAL_URL = "http://localhost:80"
-
 class MainActivity : AppCompatActivity() {
     lateinit var currentPhotoPath : String
     val REQUEST_IMAGE_CAPTURE = 1
@@ -52,9 +50,9 @@ class MainActivity : AppCompatActivity() {
             startCapture()
         }
 
-        test_button.setOnClickListener{
-            startTest()
-        }
+        /*test.setOnClickListener {
+            test()
+        }*/
     }
 
     private fun checkPermission() {
@@ -70,7 +68,7 @@ class MainActivity : AppCompatActivity() {
         val MY_PERMISSION_ACCESS_ALL = 100
         if(ActivityCompat.checkSelfPermission(this, android.Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
             || ActivityCompat.checkSelfPermission(this, android.Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED){
-            var permissions = arrayOf(
+            val permissions = arrayOf(
                 android.Manifest.permission.WRITE_EXTERNAL_STORAGE,
                 android.Manifest.permission.READ_EXTERNAL_STORAGE
             )
@@ -92,107 +90,6 @@ class MainActivity : AppCompatActivity() {
                 finish()
             }
         }
-    }
-
-    /*override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-
-        if(requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
-            val imageBitmap = data?.extras?.get("data") as Bitmap
-
-            main_img_photo.setImageBitmap(imageBitmap)
-
-            val url = edit_url_string.text.toString() // editText에서 받아온 url
-
-            // 서버로 이미지 데이터 보내기
-            val retrofit = Retrofit.Builder()
-                .baseUrl(url)
-                .addConverterFactory(GsonConverterFactory.create())
-                .build()
-            val server = retrofit.create(RetrofitAPI::class.java)
-
-            val id = edit_text_number.text.toString().toInt()
-
-            // 해당 파일을 휴대폰에 저장
-            val file = convertBitmapToFile(imageBitmap, "/storage/emulated/0/Download/$id")
-            val requestFile = file.asRequestBody("multipart/form-data".toMediaTypeOrNull())
-            val body: MultipartBody.Part = MultipartBody.Part.createFormData("image", file.name, requestFile)
-
-            server.uploadImage(id, body).enqueue((object: Callback<ResponseDC> {
-                override fun onFailure(call: Call<ResponseDC>, t: Throwable) {
-                    val msg = t.localizedMessage
-                    Toast.makeText(applicationContext, msg, Toast.LENGTH_LONG).show()
-                }
-
-                override fun onResponse(call: Call<ResponseDC>, response: Response<ResponseDC>) {
-                    val msg = response?.body().toString()
-                    Toast.makeText(applicationContext, msg,
-                        Toast.LENGTH_LONG).show()
-                }
-            }))
-        }
-   }*/
-
-    private fun startTest() {
-        val url = edit_url_string.text.toString() // editText에서 받아온 url
-
-        // 서버로 이미지 데이터 보내기
-        val retrofit = Retrofit.Builder()
-            .baseUrl(url)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-        val server = retrofit.create(RetrofitAPI::class.java)
-
-        val id = edit_text_number.text.toString().toInt()
-
-        val drawable = getDrawable(R.drawable.tongue)
-        val bitmap = (drawable as BitmapDrawable).bitmap
-
-        val directory = File("/storage/emulated/0/Download/")
-        if(!directory.exists())
-            directory.mkdirs()
-
-        val file = convertBitmapToFile(bitmap, "/storage/emulated/0/Download/$id")
-        val requestFile = file.asRequestBody("multipart/form-data".toMediaTypeOrNull())
-        val body: MultipartBody.Part = MultipartBody.Part.createFormData("image", file.name, requestFile)
-
-        server.uploadImage(id, body).enqueue((object: Callback<ResponseDC> {
-            override fun onFailure(call: Call<ResponseDC>, t: Throwable) {
-                val msg = t.localizedMessage
-                Toast.makeText(applicationContext, msg, Toast.LENGTH_LONG).show()
-            }
-
-            override fun onResponse(call: Call<ResponseDC>, response: Response<ResponseDC>) {
-                val msg = response?.body().toString()
-                Toast.makeText(applicationContext, msg, Toast.LENGTH_LONG).show()
-            }
-        }))
-    }
-
-    private fun convertBitmapToFile(bitmap: Bitmap, filePath: String): File {
-        val file = File(filePath)
-
-        var out: OutputStream? = null
-        try {
-            file.createNewFile()
-            out = FileOutputStream(file)
-
-            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-
-        finally {
-            try {
-                if (out != null) {
-                    out.close()
-                }
-            } catch (e: IOException) {
-                e.printStackTrace()
-            }
-        }
-
-        return file
     }
 
     @Throws(IOException::class)
@@ -260,7 +157,7 @@ class MainActivity : AppCompatActivity() {
                 .build()
             val server = retrofit.create(RetrofitAPI::class.java)
 
-            var id: Int?
+            val id: Int?
             if (edit_text_number.text.toString().isEmpty()) {
                 id = 1
             } else {
@@ -272,16 +169,104 @@ class MainActivity : AppCompatActivity() {
 
             server.uploadImage(id, body).enqueue((object: Callback<ResponseDC> {
                 override fun onFailure(call: Call<ResponseDC>, t: Throwable) {
-                    val msg = t.localizedMessage
+                    val msg = "fail!"
                     Toast.makeText(applicationContext, msg, Toast.LENGTH_LONG).show()
+                    textViewLog.text = t.localizedMessage
                 }
 
                 override fun onResponse(call: Call<ResponseDC>, response: Response<ResponseDC>) {
-                    val msg = response?.body().toString()
-                    Toast.makeText(applicationContext, msg,
-                        Toast.LENGTH_LONG).show()
+                    val msg = "complete!"
+                    Toast.makeText(applicationContext, msg,Toast.LENGTH_LONG).show()
+
+                    val str = response.body()?.url
+                    if (str != null) {
+                        var fileName = str.split("/")[2]
+                        val index = fileName.indexOf(".")
+                        fileName = fileName.substring(0 until index)
+                        textViewLog.text = "result : ${response.body()?.result}\nurl : ${url}/download/${fileName}"
+                    } else {
+                        textViewLog.text = "result : ${response.body()?.result}"
+                    }
                 }
             }))
         }
     }
+
+    /*fun test() {
+        val url = edit_url_string.text.toString() // editText에서 받아온 url
+
+        // 서버로 이미지 데이터 보내기
+        val retrofit = Retrofit.Builder()
+            .baseUrl(url)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+        val server = retrofit.create(RetrofitAPI::class.java)
+
+        val id: Int?
+        if (edit_text_number.text.toString().isEmpty()) {
+            id = 1
+        } else {
+            id = edit_text_number.text.toString().toInt()
+        }
+
+        val drawable = getDrawable(R.drawable.tongue)
+        val bitmap = (drawable as BitmapDrawable).bitmap
+
+        val directory = File("/storage/emulated/0/Download/")
+        if(!directory.exists())
+            directory.mkdirs()
+
+        val file = convertBitmapToFile(bitmap, "/storage/emulated/0/Download/$id")
+        val requestFile = file.asRequestBody("multipart/form-data".toMediaTypeOrNull())
+        val body: MultipartBody.Part = MultipartBody.Part.createFormData("image", file.name, requestFile)
+
+        server.uploadImage(id, body).enqueue((object: Callback<ResponseDC> {
+            override fun onFailure(call: Call<ResponseDC>, t: Throwable) {
+                val msg = "fail!"
+                Toast.makeText(applicationContext, msg, Toast.LENGTH_LONG).show()
+                textViewLog.text = t.localizedMessage
+            }
+
+            override fun onResponse(call: Call<ResponseDC>, response: Response<ResponseDC>) {
+                val msg = "complete!"
+                Toast.makeText(applicationContext, msg,Toast.LENGTH_LONG).show()
+
+                val str = response.body()?.url
+                if (str != null) {
+                    var fileName = str.split("/")[2]
+                    val index = fileName.indexOf(".")
+                    fileName = fileName.substring(0 until index)
+                    textViewLog.text = "result : ${response.body()?.result}\nurl : ${url}/download/${fileName}"
+                } else {
+                    textViewLog.text = "result : ${response.body()?.result}"
+                }
+            }
+        }))
+    }
+
+    private fun convertBitmapToFile(bitmap: Bitmap, filePath: String): File {
+        val file = File(filePath)
+
+        var out: OutputStream? = null
+        try {
+            file.createNewFile()
+            out = FileOutputStream(file)
+
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        finally {
+            try {
+                if (out != null) {
+                    out.close()
+                }
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
+        }
+
+        return file
+    }*/
 }

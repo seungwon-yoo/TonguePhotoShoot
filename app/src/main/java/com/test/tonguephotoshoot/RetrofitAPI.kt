@@ -6,7 +6,7 @@ import retrofit2.Call
 import retrofit2.Retrofit
 import retrofit2.http.*
 
-data class ResponseDC(var result: String? = null)
+data class ResponseDC(var result: String? = null, var url: String? = null)
 
 interface RetrofitAPI {
     @Multipart
